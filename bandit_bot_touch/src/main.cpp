@@ -9,6 +9,7 @@
 #include <touch_button.h>
 #include <WiFi.h>
 #include <IRCClient.h>
+#include <ArduinoOTA.h>
 
 // my own file containing wlan secrets and twitch oauth
 #include "../../security.h"
@@ -34,6 +35,8 @@
 
 char ssid[] = WLAN_SSID;
 char password[] = WLAN_PASS;
+
+#define HOSTNAME "BanditTouchBot"
 
 /*__Pin definitions for the Arduino MKR__*/
 #define TFT_CS   5
@@ -73,7 +76,7 @@ XPT2046_Touchscreen ts(TOUCH_CS, TOUCH_IRQ);
 #define NUMBER_OF_BUTTONS 12
 TouchButton *numbers[NUMBER_OF_BUTTONS];
 
-uint8_t radius = 15;
+uint8_t radius = 5;
 
 void updateBanditCmd(String param)
 {
@@ -112,7 +115,7 @@ void drawButtons()
     numbers[10]->SetColorFill(ILI9341_RED);
     numbers[10]->registerCallback(sendBanditCmd);
     numbers[10]->SetRadius(radius);
-    numbers[10]->draw(&tft, 10, 160, 230, 60);
+    numbers[10]->draw(&tft, 10, 160, 170, 60);
 
     numbers[11] = new TouchButton("X", TS_MINX, TS_MAXX, TS_MINY, TS_MAXY);
     numbers[11]->SetOutlineStrength(3);
@@ -135,6 +138,7 @@ void setup() {
     tft.setTextSize(1);
     tft.setCursor(0, 0);
 
+    WiFi.setHostname(HOSTNAME);
     WiFi.mode(WIFI_STA);
     WiFi.disconnect();
     delay(100);
@@ -167,7 +171,9 @@ void setup() {
     //tft.fillScreen(ILI9341_BLACK);// clear screen 
     //drawButtons();
 
-    
+    ArduinoOTA.setHostname(HOSTNAME);
+    //ArduinoOTA.setPassword("test123");
+    ArduinoOTA.begin();
 }
 
 void loop() {
@@ -190,11 +196,10 @@ void loop() {
             delay(2000);
             //sendTwitchMessage("Ready to go Boss!");
         } else {
-            tft.println("failed... try again in 5 seconds");
+            tft.println("failed... try again in 2 seconds");
             // Wait 5 seconds before retrying
-            delay(5000);
+            delay(2000);
         }
-        return;
     }
     else
     {
@@ -222,6 +227,7 @@ void loop() {
         {
             numbers[i]->isPressed(x, y);
         }
-        delay(100);
+        delay(50);
     }
+    ArduinoOTA.handle();
 }
