@@ -53,7 +53,7 @@ const unsigned char myBitmap [] PROGMEM = {
 	0xff, 0x83, 0xe0, 0x00, 0x00, 0x00, 0x01, 0xe0
 };
 
-#define HOSTNAME "BanditTouchBot"
+#define HOSTNAME "TwitchBot"
 
 /*__Pin definitions for the Arduino MKR__*/
 #define TFT_CS   5
@@ -126,6 +126,7 @@ void clearBanditCmd(String param)
 
 void drawButtons()
 {
+    tft.fillScreen(ILI9341_BLACK);// clear screen 
     int16_t x_coord = 10;
     for (int i = 0; i < 10; i++)
     {
@@ -209,6 +210,45 @@ void setup() {
     //tft.fillScreen(ILI9341_BLACK);// clear screen 
     //drawButtons();
 
+    ArduinoOTA.onStart([]() {
+        //Serial.println("Start");
+        tft.fillScreen(ILI9341_BLACK);// clear screen 
+        tft.setTextSize(2);
+        tft.setCursor(16, 16);
+        tft.setTextColor(ILI9341_WHITE, ILI9341_BLACK);
+        tft.println("Starting upload...");
+    });
+    ArduinoOTA.onEnd([]() {
+        //Serial.println("\nEnd");
+        tft.setTextSize(2);
+        tft.setCursor(16, 48);
+        tft.setTextColor(ILI9341_WHITE, ILI9341_BLACK);
+        tft.println("Upload finished...");
+        delay(2000);
+    });
+    ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
+        tft.setTextSize(2);
+        tft.setCursor(16, 32);
+        tft.setTextColor(ILI9341_WHITE, ILI9341_BLACK);
+        tft.printf("Progress: %u%%\r", (progress / (total / 100)));
+    });
+    ArduinoOTA.onError([](ota_error_t error) {
+        
+        tft.setCursor(16, 64);
+        tft.printf("Error[%u]: ", error);
+        tft.setCursor(16, 80);
+        if (error == OTA_AUTH_ERROR)
+            tft.println("Auth Failed");
+        else if (error == OTA_BEGIN_ERROR)
+            tft.println("Begin Failed");
+        else if (error == OTA_CONNECT_ERROR)
+            tft.println("Connect Failed");
+        else if (error == OTA_RECEIVE_ERROR)
+            tft.println("Receive Failed");
+        else if (error == OTA_END_ERROR)
+            tft.println("End Failed");
+    });
+
     ArduinoOTA.setHostname(HOSTNAME);
     //ArduinoOTA.setPassword("test123");
     ArduinoOTA.begin();
@@ -243,7 +283,7 @@ void loop() {
     {
         if (!buttons_drawn)
         {
-            tft.fillScreen(ILI9341_BLACK);// clear screen 
+            //tft.fillScreen(ILI9341_BLACK);// clear screen 
             drawButtons();
             buttons_drawn = true;
         }
