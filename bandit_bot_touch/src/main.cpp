@@ -92,8 +92,8 @@ IRCClient client(IRC_SERVER, IRC_PORT, wiFiClient);
 Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC, TFT_RST);
 XPT2046_Touchscreen ts(TOUCH_CS, TOUCH_IRQ);
 
-#define NUMBER_OF_BUTTONS 13
-TouchButton *numbers[NUMBER_OF_BUTTONS];
+#define NUMBER_OF_BUTTONS 2
+TouchButton *buttons[NUMBER_OF_BUTTONS];
 
 uint8_t radius = 5;
 
@@ -104,63 +104,50 @@ void ApplyLookAndFeel(TouchButton *btn)
     btn->SetRadius(radius);
 }
 
-void updateBanditCmd(String param)
+void sendCommand(String param)
 {
-    if (numbers[10]->GetText().length() < 10)
-        numbers[10]->UpdateText(numbers[10]->GetText() + param);
-}
-
-void sendBanditCmd(String param)
-{
-    if (numbers[10]->GetText().length() == 10)
-    {
-        client.sendMessage(ircChannel, param);
-        last_send = param;
-        numbers[10]->UpdateText("!bandit");
-    }
-}
-
-void resendBanditCmd(String param)
-{
-    if (last_send != "")
-        client.sendMessage(ircChannel, last_send);
-}
-
-void clearBanditCmd(String param)
-{
-    numbers[10]->UpdateText("!bandit");
+    client.sendMessage(ircChannel, param);
 }
 
 void drawButtons()
 {
     tft.fillScreen(ILI9341_BLACK);// clear screen 
-    int16_t x_coord = 10;
-    for (int i = 0; i < 10; i++)
-    {
-        numbers[i] = new TouchButton(String(i), TS_MINX, TS_MAXX, TS_MINY, TS_MAXY);
-        numbers[i]->registerCallback(updateBanditCmd);
-        ApplyLookAndFeel(numbers[i]);
-        numbers[i]->draw(&tft, x_coord, i < 5 ? 20 : 90, 50, 60);
-        x_coord += 60;
-        if (i == 4)
-            x_coord = 10;
-    }
+    buttons[0] = new TouchButton("!bandit", TS_MINX, TS_MAXX, TS_MINY, TS_MAXY);
+    ApplyLookAndFeel(buttons[0]);
+    buttons[0]->registerCallback(sendCommand);
+    buttons[0]->draw(&tft, 10, 10, 300, 105);
+    buttons[1] = new TouchButton("!marble", TS_MINX, TS_MAXX, TS_MINY, TS_MAXY);
+    ApplyLookAndFeel(buttons[1]);
+    buttons[1]->registerCallback(sendCommand);
+    buttons[1]->draw(&tft, 10, 125, 300, 105);
+    // tft.fillScreen(ILI9341_BLACK);// clear screen 
+    // int16_t x_coord = 10;
+    // for (int i = 0; i < 10; i++)
+    // {
+    //     numbers[i] = new TouchButton(String(i), TS_MINX, TS_MAXX, TS_MINY, TS_MAXY);
+    //     numbers[i]->registerCallback(updateBanditCmd);
+    //     ApplyLookAndFeel(numbers[i]);
+    //     numbers[i]->draw(&tft, x_coord, i < 5 ? 20 : 90, 50, 60);
+    //     x_coord += 60;
+    //     if (i == 4)
+    //         x_coord = 10;
+    // }
 
-    numbers[10] = new TouchButton("!bandit", TS_MINX, TS_MAXX, TS_MINY, TS_MAXY);
-    ApplyLookAndFeel(numbers[10]);
-    numbers[10]->registerCallback(sendBanditCmd);
-    numbers[10]->draw(&tft, 10, 160, 170, 60);
+    // numbers[10] = new TouchButton("!bandit", TS_MINX, TS_MAXX, TS_MINY, TS_MAXY);
+    // ApplyLookAndFeel(numbers[10]);
+    // numbers[10]->registerCallback(sendBanditCmd);
+    // numbers[10]->draw(&tft, 10, 160, 170, 60);
 
-    numbers[11] = new TouchButton("X", TS_MINX, TS_MAXX, TS_MINY, TS_MAXY);
-    ApplyLookAndFeel(numbers[11]);
-    numbers[11]->registerCallback(clearBanditCmd);
-    numbers[11]->draw(&tft, 250, 160, 50, 60);
+    // numbers[11] = new TouchButton("X", TS_MINX, TS_MAXX, TS_MINY, TS_MAXY);
+    // ApplyLookAndFeel(numbers[11]);
+    // numbers[11]->registerCallback(clearBanditCmd);
+    // numbers[11]->draw(&tft, 250, 160, 50, 60);
 
-    numbers[12] = new TouchButton((uint8_t *)myBitmap, 40, 40, TS_MINX, TS_MAXX, TS_MINY, TS_MAXY);
-    ApplyLookAndFeel(numbers[12]);
-    numbers[12]->registerCallback(resendBanditCmd);
-    numbers[12]->draw(&tft, 190, 160, 50, 60);
-    //tft.drawBitmap(255, 170, myBitmap, 40, 40, ILI9341_WHITE);
+    // numbers[12] = new TouchButton((uint8_t *)myBitmap, 40, 40, TS_MINX, TS_MAXX, TS_MINY, TS_MAXY);
+    // ApplyLookAndFeel(numbers[12]);
+    // numbers[12]->registerCallback(resendBanditCmd);
+    // numbers[12]->draw(&tft, 190, 160, 50, 60);
+    // //tft.drawBitmap(255, 170, myBitmap, 40, 40, ILI9341_WHITE);
 }
 
 bool buttons_drawn = false;
@@ -258,11 +245,6 @@ void setup() {
         else if (error == OTA_END_ERROR)
             tft.println("End Failed");
 
-        TouchButton *reboot = new TouchButton("Reboot", TS_MINX, TS_MAXX, TS_MINY, TS_MAXY);
-        reboot->registerCallback([](String t){ ESP.restart(); });
-        ApplyLookAndFeel(reboot);
-        reboot->draw(&tft, 40, 120, 240, 60);
-
         // delay(10000);
         // ESP.restart();
     });
@@ -321,7 +303,7 @@ void loop() {
         }
         for (int i = 0; i < NUMBER_OF_BUTTONS; i++)
         {
-            numbers[i]->isPressed(x, y);
+            buttons[i]->isPressed(x, y);
         }
         delay(50);
     }
