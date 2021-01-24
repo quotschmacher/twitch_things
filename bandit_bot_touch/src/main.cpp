@@ -97,6 +97,13 @@ TouchButton *numbers[NUMBER_OF_BUTTONS];
 
 uint8_t radius = 5;
 
+void ApplyLookAndFeel(TouchButton *btn)
+{
+    btn->SetOutlineStrength(3);
+    btn->SetColorFill(ILI9341_RED);
+    btn->SetRadius(radius);
+}
+
 void updateBanditCmd(String param)
 {
     if (numbers[10]->GetText().length() < 10)
@@ -131,10 +138,8 @@ void drawButtons()
     for (int i = 0; i < 10; i++)
     {
         numbers[i] = new TouchButton(String(i), TS_MINX, TS_MAXX, TS_MINY, TS_MAXY);
-        numbers[i]->SetOutlineStrength(3);
-        numbers[i]->SetColorFill(ILI9341_RED);
         numbers[i]->registerCallback(updateBanditCmd);
-        numbers[i]->SetRadius(radius);
+        ApplyLookAndFeel(numbers[i]);
         numbers[i]->draw(&tft, x_coord, i < 5 ? 20 : 90, 50, 60);
         x_coord += 60;
         if (i == 4)
@@ -142,23 +147,17 @@ void drawButtons()
     }
 
     numbers[10] = new TouchButton("!bandit", TS_MINX, TS_MAXX, TS_MINY, TS_MAXY);
-    numbers[10]->SetOutlineStrength(3);
-    numbers[10]->SetColorFill(ILI9341_RED);
+    ApplyLookAndFeel(numbers[10]);
     numbers[10]->registerCallback(sendBanditCmd);
-    numbers[10]->SetRadius(radius);
     numbers[10]->draw(&tft, 10, 160, 170, 60);
 
     numbers[11] = new TouchButton("X", TS_MINX, TS_MAXX, TS_MINY, TS_MAXY);
-    numbers[11]->SetOutlineStrength(3);
-    numbers[11]->SetColorFill(ILI9341_RED);
+    ApplyLookAndFeel(numbers[11]);
     numbers[11]->registerCallback(clearBanditCmd);
-    numbers[11]->SetRadius(radius);
     numbers[11]->draw(&tft, 250, 160, 50, 60);
 
     numbers[12] = new TouchButton((uint8_t *)myBitmap, 40, 40, TS_MINX, TS_MAXX, TS_MINY, TS_MAXY);
-    numbers[12]->SetOutlineStrength(3);
-    numbers[12]->SetColorFill(ILI9341_RED);
-    numbers[12]->SetRadius(radius);
+    ApplyLookAndFeel(numbers[12]);
     numbers[12]->registerCallback(resendBanditCmd);
     numbers[12]->draw(&tft, 190, 160, 50, 60);
     //tft.drawBitmap(255, 170, myBitmap, 40, 40, ILI9341_WHITE);
@@ -177,9 +176,9 @@ void setup() {
     tft.setTextSize(1);
     tft.setCursor(0, 0);
 
+    WiFi.disconnect();
     WiFi.setHostname(HOSTNAME);
     WiFi.mode(WIFI_STA);
-    WiFi.disconnect();
     delay(100);
     
     ircChannel = "#" + twitchChannelName;
@@ -211,32 +210,43 @@ void setup() {
     //drawButtons();
 
     ArduinoOTA.onStart([]() {
-        //Serial.println("Start");
         tft.fillScreen(ILI9341_BLACK);// clear screen 
         tft.setTextSize(2);
         tft.setCursor(16, 16);
         tft.setTextColor(ILI9341_WHITE, ILI9341_BLACK);
-        tft.println("Starting upload...");
+        int cmd = ArduinoOTA.getCommand();
+        switch (cmd)
+        {
+        case U_FLASH:
+            tft.println("Start uploading sketch...");
+            break;
+        case U_SPIFFS:
+            tft.println("Start uploading fs...");
+            break;
+        default:
+            tft.println("Start uploading...");
+            break;
+        }
     });
     ArduinoOTA.onEnd([]() {
-        //Serial.println("\nEnd");
         tft.setTextSize(2);
-        tft.setCursor(16, 48);
+        tft.setCursor(16, 52);
         tft.setTextColor(ILI9341_WHITE, ILI9341_BLACK);
         tft.println("Upload finished...");
         delay(2000);
     });
     ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
         tft.setTextSize(2);
-        tft.setCursor(16, 32);
+        tft.setCursor(16, 34);
         tft.setTextColor(ILI9341_WHITE, ILI9341_BLACK);
         tft.printf("Progress: %u%%\r", (progress / (total / 100)));
     });
     ArduinoOTA.onError([](ota_error_t error) {
         
-        tft.setCursor(16, 64);
+        tft.setCursor(16, 68);
+        tft.setTextColor(ILI9341_RED);
         tft.printf("Error[%u]: ", error);
-        tft.setCursor(16, 80);
+        tft.setCursor(16, 86);
         if (error == OTA_AUTH_ERROR)
             tft.println("Auth Failed");
         else if (error == OTA_BEGIN_ERROR)
@@ -247,6 +257,14 @@ void setup() {
             tft.println("Receive Failed");
         else if (error == OTA_END_ERROR)
             tft.println("End Failed");
+
+        TouchButton *reboot = new TouchButton("Reboot", TS_MINX, TS_MAXX, TS_MINY, TS_MAXY);
+        reboot->registerCallback([](String t){ ESP.restart(); });
+        ApplyLookAndFeel(reboot);
+        reboot->draw(&tft, 40, 120, 240, 60);
+
+        // delay(10000);
+        // ESP.restart();
     });
 
     ArduinoOTA.setHostname(HOSTNAME);
